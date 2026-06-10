@@ -23,31 +23,13 @@ export function AuthProvider({ children }) {
 
   async function loadProfile(userId) {
     const { data } = await supabase.from('users').select('*').eq('id', userId).single()
-    if (data) {
-      setUser(data)
-    } else {
-      setUser(null)
-    }
+    setUser(data || null)
     setLoading(false)
   }
 
   async function signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
-
-    const { data: profile } = await supabase.from('users').select('*').eq('id', data.user.id).single()
-    
-    if (!profile) {
-      await supabase.auth.signOut()
-      throw new Error('Usuario no encontrado. Contacta al administrador.')
-    }
-    
-    if (!profile.approved) {
-      await supabase.auth.signOut()
-      if (!profile) { await supabase.auth.signOut(); throw new Error('Usuario no encontrado.') }
-      throw new Error('Tu cuenta está pendiente de aprobación')
-    }
-    
     return data
   }
 
@@ -55,19 +37,16 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
 
-    // Check if first user
     const { count } = await supabase.from('users').select('*', { count: 'exact', head: true })
     const isFirst = count === 0
 
-    const { error: insertError } = await supabase.from('users').insert({
+    await supabase.from('users').insert({
       id: data.user.id,
       name,
       email,
       admin: isFirst,
       approved: isFirst,
     })
-
-    if (insertError) console.error('Insert error:', insertError)
 
     if (!isFirst) {
       await supabase.auth.signOut()
