@@ -44,6 +44,7 @@ export function AuthProvider({ children }) {
     
     if (!profile.approved) {
       await supabase.auth.signOut()
+      if (!profile) { await supabase.auth.signOut(); throw new Error('Usuario no encontrado.') }
       throw new Error('Tu cuenta está pendiente de aprobación')
     }
     
