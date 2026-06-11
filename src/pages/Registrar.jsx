@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
-import { INTERVALS, getNextKm } from '../lib/intervals'
+import { INTERVALS } from '../lib/intervals'
 import Header from '../components/Header'
 import BottomNav from '../components/BottomNav'
 
@@ -14,6 +14,7 @@ export default function Registrar() {
   const [carId, setCarId] = useState(searchParams.get('car') || '')
   const [partName, setPartName] = useState('')
   const [km, setKm] = useState('')
+  const [customInterval, setCustomInterval] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
@@ -35,17 +36,26 @@ export default function Registrar() {
     if (car) setKm(String(car.km))
   }
 
-  const nextKm = partName && km ? getNextKm(partName, Number(km)) : null
+  function handlePartChange(name) {
+    setPartName(name)
+    const interval = INTERVALS.find(i => i.name === name)
+    if (interval) setCustomInterval(String(interval.min))
+  }
+
+  const intervalKm = parseInt(customInterval) || 0
+  const nextKm = partName && km && intervalKm ? Number(km) + intervalKm : null
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!carId || !partName) { setError('Selecciona un auto y el componente'); return }
+    if (!intervalKm) { setError('Ingresa el intervalo en km'); return }
     setError('')
     setLoading(true)
-    const next_km = getNextKm(partName, Number(km))
-    const { error: err } = await supabase.from('maintenance_records').insert({ car_id: carId, part_name: partName, km_at_service: Number(km), next_km, date, notes })
+    const next_km = Number(km) + intervalKm
+    const { error: err } = await supabase.from('maintenance_records').insert({
+      car_id: carId, part_name: partName, km_at_service: Number(km), next_km, date, notes
+    })
     if (err) { setError(err.message); setLoading(false); return }
-    // Update car km if higher
     const car = cars.find(c => c.id === carId)
     if (car && Number(km) > car.km) await supabase.from('cars').update({ km: Number(km) }).eq('id', carId)
     setSuccess(true)
@@ -59,7 +69,7 @@ export default function Registrar() {
         <h3 style={{ fontSize: 14, fontWeight: 600, color: '#1e293b', marginBottom: 12 }}>Registrar Mantención</h3>
         <div className="hint-box">
           <span>🔧</span>
-          <span>Selecciona qué hiciste y el kilometraje. AutoCuidado calcula automáticamente cuándo será la próxima.</span>
+          <span>Selecciona qué hiciste y el kilometraje. Puedes ajustar el intervalo según tu mecánico.</span>
         </div>
 
         {error && <div className="error-msg">{error}</div>}
@@ -75,7 +85,7 @@ export default function Registrar() {
           </div>
           <div className="form-group">
             <label className="form-label">¿Qué le hiciste al auto?</label>
-            <select className="form-input" value={partName} onChange={e => setPartName(e.target.value)} required>
+            <select className="form-input" value={partName} onChange={e => handlePartChange(e.target.value)} required>
               <option value="">-- Selecciona --</option>
               {INTERVALS.map(i => <option key={i.name} value={i.name}>{i.icon} {i.name}</option>)}
             </select>
@@ -83,6 +93,13 @@ export default function Registrar() {
           <div className="form-group">
             <label className="form-label">Kilometraje actual del auto</label>
             <input className="form-input" type="number" value={km} onChange={e => setKm(e.target.value)} placeholder="48500" required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Próximo cambio cada (km)</label>
+            <input className="form-input" type="number" value={customInterval} onChange={e => setCustomInterval(e.target.value)} placeholder="Ej: 10000" required />
+            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+              Puedes ajustar según lo que te indicó tu mecánico
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">Fecha</label>
