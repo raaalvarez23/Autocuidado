@@ -14,8 +14,6 @@ export default function CarDetail() {
   const [tab, setTab] = useState('proximas')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { load() }, [id])
-
   async function load() {
     const { data: carData } = await supabase.from('cars').select('*').eq('id', id).single()
     if (!carData) { navigate('/cars'); return }
@@ -26,11 +24,19 @@ export default function CarDetail() {
     setLoading(false)
   }
 
-  async function handleDelete() {
+  useEffect(() => { load() }, [id])
+
+  async function handleDeleteCar() {
     if (!confirm('¿Eliminar este auto y todo su historial?')) return
     await supabase.from('maintenance_records').delete().eq('car_id', id)
     await supabase.from('cars').delete().eq('id', id)
     navigate('/cars')
+  }
+
+  async function handleDeleteRecord(recordId, partName) {
+    if (!confirm(`¿Eliminar el registro de "${partName}"?`)) return
+    await supabase.from('maintenance_records').delete().eq('id', recordId)
+    load()
   }
 
   if (loading) return <div className="app-shell"><Header title="Detalle del Auto" showBack /><div className="loading">Cargando...</div></div>
@@ -54,12 +60,12 @@ export default function CarDetail() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
           <Link to={`/cars/${id}/edit`}><button className="btn btn-outline btn-sm" style={{ width: '100%' }}>✏️ Editar</button></Link>
           <button className="btn btn-outline btn-sm">🔗 Compartir</button>
-          <button className="btn btn-danger btn-sm" onClick={handleDelete}>🗑️ Eliminar</button>
+          <button className="btn btn-danger btn-sm" onClick={handleDeleteCar}>🗑️ Eliminar</button>
         </div>
 
         <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: 12, gap: 4 }}>
-          {[['proximas', '⚠️ Próximas mantenciones'], ['historial', '📋 Historial']].map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t)} style={{ background: 'none', border: 'none', padding: '8px 10px', fontSize: 12, cursor: 'pointer', color: tab === t ? '#2d4faa' : '#9ca3af', fontWeight: tab === t ? 600 : 400, borderBottom: tab === t ? '2px solid #2d4faa' : '2px solid transparent' }}>
+          {[['proximas', '⚠️ Próximas'], ['historial', '📋 Historial']].map(([t, label]) => (
+            <button key={t} onClick={() => setTab(t)} style={{ background: 'none', border: 'none', padding: '8px 12px', fontSize: 12, cursor: 'pointer', color: tab === t ? '#2d4faa' : '#9ca3af', fontWeight: tab === t ? 600 : 400, borderBottom: tab === t ? '2px solid #2d4faa' : '2px solid transparent' }}>
               {label}
             </button>
           ))}
@@ -74,7 +80,6 @@ export default function CarDetail() {
               {s.status === 'ok'        && <span className="badge badge-ok">✅ Bien</span>}
               {s.status === 'no-record' && <span className="badge badge-norecord">❓ Sin registro</span>}
             </div>
-
             {s.status === 'no-record' ? (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280' }}>
@@ -112,7 +117,14 @@ export default function CarDetail() {
               <div key={r.id} className="card" style={{ cursor: 'default' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{r.part_name}</div>
-                  <span className="badge badge-ok">{new Date(r.date + 'T00:00:00').toLocaleDateString('es-CL')}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span className="badge badge-ok">{new Date(r.date + 'T00:00:00').toLocaleDateString('es-CL')}</span>
+                    <button
+                      onClick={() => handleDeleteRecord(r.id, r.part_name)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#ef4444', padding: '0 2px' }}
+                      title="Eliminar registro"
+                    >🗑️</button>
+                  </div>
                 </div>
                 <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
                   A los {r.km_at_service.toLocaleString('es-CL')} km · próximo: {r.next_km.toLocaleString('es-CL')} km
