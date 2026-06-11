@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { calcAllStatuses, INTERVALS } from '../lib/intervals'
+import { calcAllStatuses } from '../lib/intervals'
 import Header from '../components/Header'
 import BottomNav from '../components/BottomNav'
 
@@ -13,6 +13,9 @@ export default function CarDetail() {
   const [statuses, setStatuses] = useState([])
   const [tab, setTab] = useState('proximas')
   const [loading, setLoading] = useState(true)
+  const [showShare, setShowShare] = useState(false)
+  const [qrUrl, setQrUrl] = useState('')
+  const [shareCode, setShareCode] = useState('')
 
   async function load() {
     const { data: carData } = await supabase.from('cars').select('*').eq('id', id).single()
@@ -39,6 +42,34 @@ export default function CarDetail() {
     load()
   }
 
+  function handleShare() {
+    const payload = {
+      car: {
+        name: car.name,
+        brand: car.brand,
+        model: car.model,
+        year: car.year,
+        plate: car.plate,
+        engine: car.engine,
+        transmission: car.transmission,
+        fuel: car.fuel,
+        km: car.km,
+      },
+      records: records.map(r => ({
+        part_name: r.part_name,
+        km_at_service: r.km_at_service,
+        next_km: r.next_km,
+        date: r.date,
+        notes: r.notes,
+      }))
+    }
+    const code = btoa(JSON.stringify(payload))
+    setShareCode(code)
+    const qr = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`
+    setQrUrl(qr)
+    setShowShare(true)
+  }
+
   if (loading) return <div className="app-shell"><Header title="Detalle del Auto" showBack /><div className="loading">Cargando...</div></div>
   if (!car) return null
 
@@ -50,6 +81,38 @@ export default function CarDetail() {
   return (
     <div className="app-shell">
       <Header title="Detalle del Auto" showBack />
+
+      {showShare && (
+        <div className="modal-overlay" onClick={() => setShowShare(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">🔗 Compartir historial</span>
+              <button className="modal-close" onClick={() => setShowShare(false)}>✕</button>
+            </div>
+            <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 16 }}>
+              El otro usuario escanea este QR desde la app para importar el historial de <strong>{car.name}</strong>.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <img src={qrUrl} alt="QR historial" style={{ borderRadius: 8, border: '1px solid #e5e7eb' }} />
+            </div>
+            <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 8, textAlign: 'center' }}>
+              O copia el código y pásalo manualmente:
+            </p>
+            <textarea
+              readOnly
+              value={shareCode}
+              style={{ width: '100%', height: 60, fontSize: 10, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, resize: 'none', wordBreak: 'break-all' }}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={() => { navigator.clipboard.writeText(shareCode); alert('¡Código copiado!') }}
+            >
+              📋 Copiar código
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="main-content">
         <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{car.name}</h2>
         <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{car.brand} {car.model} · {car.year} · {car.plate}</div>
@@ -59,7 +122,7 @@ export default function CarDetail() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
           <Link to={`/cars/${id}/edit`}><button className="btn btn-outline btn-sm" style={{ width: '100%' }}>✏️ Editar</button></Link>
-          <button className="btn btn-outline btn-sm">🔗 Compartir</button>
+          <button className="btn btn-outline btn-sm" onClick={handleShare}>🔗 Compartir</button>
           <button className="btn btn-danger btn-sm" onClick={handleDeleteCar}>🗑️ Eliminar</button>
         </div>
 
@@ -122,7 +185,6 @@ export default function CarDetail() {
                     <button
                       onClick={() => handleDeleteRecord(r.id, r.part_name)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#ef4444', padding: '0 2px' }}
-                      title="Eliminar registro"
                     >🗑️</button>
                   </div>
                 </div>
