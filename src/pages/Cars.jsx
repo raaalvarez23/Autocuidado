@@ -31,7 +31,7 @@ export default function Cars() {
     <div className="app-shell">
       <Header title="Mis Autos" />
       <div className="main-content">
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginBottom: 12 }}>Todos tus autos</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>Todos tus autos</div>
 
         {loading && <div className="loading">Cargando...</div>}
         {!loading && cars.length === 0 && <div className="empty-state"><div style={{ fontSize: 40 }}>🚗</div><p>Aún no tienes autos</p></div>}
@@ -40,12 +40,12 @@ export default function Cars() {
           <Link key={car.id} to={`/cars/${car.id}`} className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>{car.name}</div>
-                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{car.brand} {car.model} · {car.year} · {car.plate}</div>
-                <div style={{ fontSize: 11, color: '#6b7280' }}>{car.engine} · {car.transmission} · {car.fuel}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{car.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-sec)', marginTop: 2 }}>{car.brand} {car.model} · {car.year} · {car.plate}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-sec)' }}>{car.engine} · {car.transmission} · {car.fuel}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#2d4faa' }}>{car.km.toLocaleString('es-CL')} km</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--blue)' }}>{car.km.toLocaleString('es-CL')} km</div>
                 {car.vencidas > 0 && <span className="badge badge-danger" style={{ marginTop: 4 }}>{car.vencidas} vencida{car.vencidas > 1 ? 's' : ''}</span>}
                 {car.vencidas === 0 && car.proximas > 0 && <span className="badge badge-warn" style={{ marginTop: 4 }}>{car.proximas} próxima{car.proximas > 1 ? 's' : ''}</span>}
               </div>
